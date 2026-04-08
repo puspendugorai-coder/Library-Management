@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Book Entry Portal</title>
+<link rel="stylesheet" href="/static/css/book_entry.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- Header -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="logo-icon">📖</span>
+    <span class="logo-text">Book Entry Portal</span>
+  </div>
+  <div class="topbar-right">
+    <div class="user-chip">👤 {{ user }}</div>
+    <button class="hdr-btn red" onclick="window.close()">✕ Close</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Form -->
+  <main class="form-panel">
+    <div class="form-card">
+      <div class="section-title">📚 Book Details</div>
+
+      <div class="field">
+        <label>Book ID <span class="req">*</span>
+          <span class="hint">(max 6 alphanumeric)</span></label>
+        <input type="text" id="bkID" maxlength="6"
+               oninput="enforceAlnum(this)" placeholder="e.g. BK001"/>
+      </div>
+
+      <div class="field">
+        <label>Book Name <span class="req">*</span></label>
+        <input type="text" id="bkName" placeholder="Full book title"/>
+      </div>
+
+      <div class="field">
+        <label>Author <span class="req">*</span></label>
+        <input type="text" id="bkAuthor" placeholder="Author name"/>
+      </div>
+
+      <div class="field">
+        <label>Book Price (Rs.) <span class="req">*</span></label>
+        <input type="number" id="bkPrice" min="0" step="0.01"
+               placeholder="e.g. 299.00"/>
+      </div>
+
+      <div class="field">
+        <label>Available Books <span class="req">*</span></label>
+        <input type="number" id="bkAvail" min="0" placeholder="e.g. 5"/>
+      </div>
+
+      <div class="status-bar hidden" id="statusBar"></div>
+
+      <div class="btn-row">
+        <button class="action-btn green" onclick="addBook()">➕ Add Book</button>
+        <button class="action-btn blue"  onclick="updateBook()">✏️ Update</button>
+        <button class="action-btn red"   onclick="deleteBook()">🗑 Delete</button>
+        <button class="action-btn gray"  onclick="clearForm()">✕ Clear</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: Books scrollable list -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span>📚 Books Database</span>
+      <button class="refresh-btn" onclick="loadBooks()">↻</button>
+    </div>
+    <div class="search-wrap">
+      <input type="text" id="bookSearch" placeholder="🔍 Search…" oninput="filterBooks()"/>
+    </div>
+    <div class="list-scroll">
+      <table id="booksTable">
+        <thead>
+          <tr>
+            <th>Book ID</th>
+            <th>Book Name</th>
+            <th>Author</th>
+            <th>Price (Rs.)</th>
+            <th>Available</th>
+          </tr>
+        </thead>
+        <tbody id="booksTbody">
+          <tr><td colspan="5" class="table-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </aside>
+
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal-box">
+    <h2>🗑 Delete Book</h2>
+    <p class="modal-sub" id="deleteMsg">Are you sure you want to delete this book?</p>
+    <div class="modal-btns">
+      <button class="action-btn red"  onclick="confirmDelete()">✅ Yes, Delete</button>
+      <button class="action-btn gray" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/book_entry.js"></script>
+</body>
+</html>

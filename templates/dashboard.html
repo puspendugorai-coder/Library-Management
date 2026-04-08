@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Library Management – Dashboard</title>
+<link rel="stylesheet" href="/static/css/dashboard.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="logo-icon">📚</span>
+    <span class="logo-text">LibraryMS</span>
+    <span class="page-badge">Customer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <button class="hdr-btn purple" onclick="openBookEntryLogin()">📖 Book Entry</button>
+    <div class="user-chip">👤 {{ user }}</div>
+    <a href="/logout" class="hdr-btn red">🚪 Logout</a>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- LEFT SIDEBAR: Registered Books -->
+  <aside class="sidebar" id="booksSidebar">
+    <div class="sidebar-header">
+      <span>📚 Registered Books</span>
+      <button class="refresh-btn" onclick="loadBooks()" title="Refresh">↻</button>
+    </div>
+    <div class="search-wrap">
+      <input type="text" id="bookSearch" placeholder="🔍 Search books…"
+             oninput="filterBooks()" autocomplete="off" name="search_books"/>
+    </div>
+    <div class="sidebar-list" id="booksList">
+      <div class="list-loading">Loading books…</div>
+    </div>
+  </aside>
+
+  <!-- CENTER PANEL -->
+  <main class="center-panel">
+
+    <!-- Member Information -->
+    <section class="form-card">
+      <div class="section-title accent-blue"><span>👤 Member Information</span></div>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Member Type <span class="req">*</span></label>
+          <select id="fMemberType">
+            <option value="">-- Select --</option>
+            <option>Admin Staff</option><option>Student</option>
+            <option>Lecturer</option><option>Professor</option><option>Teacher</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>PRN No. <span class="req">*</span> <span class="hint">(max 6 alphanumeric)</span></label>
+          <input type="text" id="fPRN" maxlength="6" oninput="enforceAlnum(this)" placeholder="e.g. A12345"/>
+        </div>
+
+        <div class="field">
+          <label>ID No. <span class="req">*</span> <span class="hint">(max 6 alphanumeric)</span></label>
+          <input type="text" id="fIDNO" maxlength="6" oninput="enforceAlnum(this)" placeholder="e.g. ST0012"/>
+        </div>
+
+        <div class="field">
+          <label>First Name <span class="req">*</span></label>
+          <input type="text" id="fFirst" placeholder="First name"/>
+        </div>
+
+        <div class="field">
+          <label>Last Name <span class="req">*</span></label>
+          <input type="text" id="fLast" placeholder="Last name"/>
+        </div>
+
+        <div class="field">
+          <label>Address 1 <span class="req">*</span></label>
+          <input type="text" id="fAddr1" placeholder="House/Flat No., Street"/>
+        </div>
+
+        <div class="field">
+          <label>Address 2</label>
+          <input type="text" id="fAddr2" placeholder="City, State"/>
+        </div>
+
+        <div class="field">
+          <label>Mobile <span class="req">*</span> <span class="hint">(exactly 10 digits)</span></label>
+          <input type="text" id="fMobile" maxlength="10" oninput="enforceDigits(this)" placeholder="10-digit number"/>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Book & Lending Details -->
+    <section class="form-card">
+      <div class="section-title accent-green"><span>📖 Book &amp; Lending Details</span></div>
+      <div class="form-grid">
+
+        <div class="field">
+          <label>Book ID <span class="req">*</span></label>
+          <input type="text" id="fBookID" placeholder="Select from sidebar" readonly class="readonly-field"/>
+        </div>
+
+        <div class="field">
+          <label>Book Name <span class="req">*</span></label>
+          <input type="text" id="fBookName" placeholder="Select from sidebar" readonly class="readonly-field"/>
+        </div>
+
+        <div class="field">
+          <label>Author <span class="req">*</span></label>
+          <input type="text" id="fAuthor" placeholder="Select from sidebar" readonly class="readonly-field"/>
+        </div>
+
+        <div class="field">
+          <label>Date Borrowed <span class="req">*</span></label>
+          <input type="date" id="fDateBorrow" onchange="calcDays()"/>
+        </div>
+
+        <div class="field">
+          <label>Return Date <span class="req">*</span></label>
+          <input type="date" id="fReturnDate" onchange="calcDays()"/>
+        </div>
+
+        <div class="field">
+          <label>Days <span class="hint">(auto)</span></label>
+          <input type="text" id="fDays" readonly class="readonly-field" placeholder="Auto calculated"/>
+        </div>
+
+        <div class="field">
+          <label>Days Left <span class="hint">(auto, counts down daily)</span></label>
+          <input type="text" id="fDaysLeft" readonly class="readonly-field days-left-field" placeholder="Auto calculated"/>
+        </div>
+
+        <div class="field">
+          <label>Qty <span class="req">*</span></label>
+          <input type="number" id="fQty" min="1" value="1" oninput="calcFinalPrice()" placeholder="1"/>
+        </div>
+
+        <div class="field">
+          <label>Late Return Fine <span class="hint">(Rs. per day after overdue)</span></label>
+          <input type="text" id="fLateFine" placeholder="e.g. 50"/>
+        </div>
+
+        <div class="field">
+          <label>Date Overdue <span class="hint">(auto)</span></label>
+          <input type="text" id="fDateOverdue" readonly class="readonly-field" placeholder="Auto calculated"/>
+        </div>
+
+        <div class="field">
+          <label>Total Fine <span class="hint">(auto, updated daily)</span></label>
+          <input type="text" id="fTotalFine" readonly class="readonly-field fine-field" placeholder="Auto calculated"/>
+        </div>
+
+        <div class="field">
+          <label>Final Price <span class="hint">(Book Price × Qty — auto)</span></label>
+          <input type="text" id="fFinalPrice" readonly class="readonly-field price-field" placeholder="Auto: Price × Qty"/>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <div class="action-bar">
+      <button class="action-btn green"  onclick="addCustomer()">➕ Add Customer</button>
+      <button class="action-btn blue"   onclick="updateCustomer()">✏️ Update</button>
+      <button class="action-btn orange" onclick="confirmReturn()">🔄 Returned</button>
+      <button class="action-btn purple" onclick="clearBookFields()">📖 Add New Book</button>
+      <button class="action-btn gray"   onclick="clearAll()">🗑 Clear</button>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar hidden" id="statusBar"></div>
+
+    <!-- Customer Records Table -->
+    <section class="table-card">
+      <div class="table-header">
+        <span class="section-title accent-blue" style="margin:0">📋 Customer Records</span>
+        <div class="search-wrap" style="margin:0;max-width:260px">
+          <input type="text" id="custSearch" placeholder="🔍 Search customers…"
+                 oninput="filterCustomers()" autocomplete="off" name="search_customers"/>
+        </div>
+        <button class="refresh-btn" onclick="loadCustomers()" title="Refresh">↻</button>
+      </div>
+      <div class="table-scroll">
+        <table id="custTable">
+          <thead>
+            <tr>
+              <th>Member Type</th><th>PRN No</th><th>ID No</th>
+              <th>First Name</th><th>Last Name</th>
+              <th>Address 1</th><th>Address 2</th><th>Mobile</th>
+              <th>Book ID</th><th>Book Name</th><th>Author</th>
+              <th>Date Borrowed</th><th>Return Date</th>
+              <th>Days</th><th>Days Left</th><th>Qty</th>
+              <th>Late Fine</th><th>Date Overdue</th>
+              <th>Total Fine</th><th>Final Price</th>
+            </tr>
+          </thead>
+          <tbody id="custTbody">
+            <tr><td colspan="20" class="table-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Book Entry Login Modal -->
+<div class="modal-overlay hidden" id="bookLoginModal">
+  <div class="modal-box">
+    <div class="modal-stripe purple"></div>
+    <h2>🔒 Book Entry Login</h2>
+    <p class="modal-sub">Enter your credentials to access Book Entry</p>
+    <div class="modal-field">
+      <label>User ID</label>
+      <input type="text" id="beUid" placeholder="User ID" autocomplete="new-password"/>
+    </div>
+    <div class="modal-field">
+      <label>Password</label>
+      <input type="password" id="bePwd" placeholder="Password" autocomplete="new-password"/>
+    </div>
+    <div class="modal-alert hidden" id="beAlert"></div>
+    <div class="modal-btns">
+      <button class="action-btn blue" onclick="doBookLogin()">🔓 Login</button>
+      <button class="action-btn gray" onclick="closeModal('bookLoginModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Return Confirmation Modal -->
+<div class="modal-overlay hidden" id="returnModal">
+  <div class="modal-box">
+    <div class="modal-stripe orange"></div>
+    <h2>🔄 Confirm Return</h2>
+    <p class="modal-sub" id="returnMsg">Is the book returned?</p>
+    <div class="modal-btns">
+      <button class="action-btn green" onclick="doReturn()">✅ Yes, Returned</button>
+      <button class="action-btn gray"  onclick="closeModal('returnModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

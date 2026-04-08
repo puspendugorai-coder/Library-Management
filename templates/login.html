@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Library Management – Login</title>
+<link rel="stylesheet" href="/static/css/auth.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- Animated Background -->
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="auth-wrapper">
+  <!-- Brand Header -->
+  <div class="brand">
+    <div class="brand-icon">📚</div>
+    <h1 class="brand-title">LibraryMS</h1>
+    <p class="brand-sub">Management Portal</p>
+  </div>
+
+  <!-- Card -->
+  <div class="auth-card" id="authCard">
+
+    <!-- TAB SWITCHER -->
+    <div class="tab-switcher">
+      <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+      <button class="tab-btn" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+      <div class="tab-indicator" id="tabIndicator"></div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm" class="auth-form active" onsubmit="doLogin(event)">
+      <div class="field-group">
+        <label>User ID</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="loginUid" placeholder="Enter your User ID" autocomplete="username" required/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="password" id="loginPwd" placeholder="Enter your password" autocomplete="current-password" required/>
+          <button type="button" class="eye-btn" onclick="togglePwd('loginPwd',this)">👁</button>
+        </div>
+      </div>
+      <div class="alert hidden" id="loginAlert"></div>
+      <div class="lock-timer hidden" id="lockTimer">
+        <span class="lock-icon">🔒</span>
+        <span id="lockCount">60</span>s remaining
+      </div>
+      <button type="submit" class="btn-primary" id="loginBtn">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-loader hidden">⏳</span>
+      </button>
+    </form>
+
+    <!-- SIGNUP FORM -->
+    <form id="signupForm" class="auth-form" onsubmit="doSignup(event)">
+      <div class="field-group">
+        <label>User ID</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="suUid" placeholder="Choose a User ID" required/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="password" id="suPwd" placeholder="Min 4 characters" required/>
+          <button type="button" class="eye-btn" onclick="togglePwd('suPwd',this)">👁</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Confirm Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="password" id="suCpwd" placeholder="Re-enter password" required/>
+          <button type="button" class="eye-btn" onclick="togglePwd('suCpwd',this)">👁</button>
+        </div>
+      </div>
+      <div class="alert hidden" id="signupAlert"></div>
+      <button type="submit" class="btn-primary green" id="signupBtn">
+        <span class="btn-text">Create Account</span>
+        <span class="btn-loader hidden">⏳</span>
+      </button>
+    </form>
+
+  </div><!-- /auth-card -->
+</div>
+
+<script src="/static/js/auth.js"></script>
+</body>
+</html>
