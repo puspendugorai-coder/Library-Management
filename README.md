@@ -13,7 +13,7 @@ pinned: false
 A full-stack, professional Library Management System built with **Flask** and **Supabase**. This application features a robust backend for managing book inventory, customer records, and secure administrative access.
 
 ### 🚀 Live Demo
-[**Click here to open library app**](https://alphacoder7206-Library-Management.hf.space/)
+[**Click here to open library app**](https://huggingface.co/spaces/AlphaCoder7206/Library-Management-System)
 
 ---
 
