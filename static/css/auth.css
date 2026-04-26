@@ -8,26 +8,24 @@
 }
 
 :root {
-    --bg: #080e1f;
-    --card: #0f1729;
-    --card2: #162040;
-    --input: #1a2540;
+    --bg: #0b0f1a;
+    --card: #131929;
+    --card2: #1a2236;
     --border: #2a3a5c;
-    --accent: #4f9cf9;
-    --accent2: #22c55e;
-    --accent-r: #ef4444;
-    --accent-y: #f59e0b;
-    --accent-p: #a78bfa;
-    --text: #f0f4ff;
-    --muted: #94a3b8;
-    --btn-blue: #2563eb;
-    --btn-green: #16a34a;
-    --radius: 14px;
-    --shadow: 0 20px 60px rgba(0, 0, 0, .6);
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --teal: #2dd4bf;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e8edf8;
+    --muted: #8a9bbf;
+    --radius: 16px;
+    --font-head: 'Playfair Display', serif;
+    --font-body: 'DM Sans', sans-serif;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -35,10 +33,9 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    position: relative;
 }
 
-/* ── Animated orbs ── */
+/* ── Animated Orbs ── */
 .bg-orbs {
     position: fixed;
     inset: 0;
@@ -49,41 +46,63 @@ body {
 .orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(90px);
-    opacity: .35;
-    animation: drift 12s ease-in-out infinite alternate;
+    filter: blur(80px);
+    opacity: 0.35;
+    animation: float 8s ease-in-out infinite;
 }
 
 .orb1 {
-    width: 420px;
-    height: 420px;
-    background: #1d4ed8;
-    top: -10%;
-    left: -8%;
+    width: 400px;
+    height: 400px;
+    background: #4f8ef7;
+    top: -100px;
+    left: -100px;
     animation-delay: 0s;
 }
 
 .orb2 {
-    width: 340px;
-    height: 340px;
-    background: #7c3aed;
-    bottom: 5%;
-    right: -8%;
-    animation-delay: -4s;
+    width: 350px;
+    height: 350px;
+    background: #7c5cfc;
+    bottom: -80px;
+    right: -80px;
+    animation-delay: -3s;
 }
 
 .orb3 {
     width: 280px;
     height: 280px;
-    background: #0f766e;
-    bottom: 30%;
-    left: 30%;
-    animation-delay: -8s;
+    background: #2dd4bf;
+    top: 50%;
+    left: 50%;
+    animation-delay: -6s;
 }
 
-@keyframes drift {
-    to {
-        transform: translate(30px, 20px) scale(1.08);
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-30px) scale(1.05);
+    }
+}
+
+.orb3 {
+    animation: float3 10s ease-in-out infinite;
+}
+
+@keyframes float3 {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        transform: translate(-50%, -55%) scale(1.08);
     }
 }
 
@@ -94,10 +113,9 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 1.5rem;
     width: 100%;
-    max-width: 440px;
-    padding: 20px;
+    padding: 2rem 1rem;
 }
 
 /* ── Brand ── */
@@ -106,62 +124,180 @@ body {
 }
 
 .brand-icon {
-    font-size: 3rem;
+    font-size: 2.8rem;
+    display: block;
+    margin-bottom: 0.4rem;
 }
 
 .brand-title {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #4f9cf9, #a78bfa);
-
-    /* Add these two lines together */
+    font-family: var(--font-head);
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #4f8ef7, #7c5cfc, #2dd4bf);
     -webkit-background-clip: text;
-    background-clip: text;
-    /* <--- Add this line */
-
     -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .brand-sub {
     color: var(--muted);
-    font-size: .85rem;
-    margin-top: 2px;
+    font-size: 0.9rem;
+    margin-top: 0.2rem;
 }
 
-/* ── Card ── */
+/* ── Auth Card ── */
 .auth-card {
-    width: 100%;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
+    padding: 2rem;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    animation: slideUp 0.4s ease;
 }
 
-/* ── Tab switcher ── */
-.tab-switcher {
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ── Role Selector ── */
+.role-heading {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.02em;
+}
+
+.role-btns {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    background: var(--input);
+    gap: 1rem;
+}
+
+.role-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1.6rem 1rem;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: var(--card2);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    color: var(--text);
+    font-family: var(--font-body);
+}
+
+.role-btn:hover {
+    transform: translateY(-4px);
+}
+
+.role-btn.manager:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 30px rgba(79, 142, 247, 0.25);
+}
+
+.role-btn.customer:hover {
+    border-color: var(--teal);
+    box-shadow: 0 8px 30px rgba(45, 212, 191, 0.25);
+}
+
+.role-icon {
+    font-size: 2.2rem;
+}
+
+.role-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.role-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+/* ── Back Button ── */
+.back-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0 0 1rem 0;
+    transition: color 0.2s;
+    font-family: var(--font-body);
+    display: block;
+}
+
+.back-btn:hover {
+    color: var(--text);
+}
+
+/* ── Role Badge inside card ── */
+.card-role-badge {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.02em;
+}
+
+.manager-badge {
+    background: rgba(79, 142, 247, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.customer-badge {
+    background: rgba(45, 212, 191, 0.12);
+    color: var(--teal);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+}
+
+/* ── Tab Switcher ── */
+.tab-switcher {
+    display: flex;
     position: relative;
+    background: var(--card2);
+    border-radius: 10px;
     padding: 4px;
     gap: 4px;
+    margin-bottom: 1.5rem;
 }
 
 .tab-btn {
-    background: transparent;
+    flex: 1;
+    padding: 0.55rem;
     border: none;
+    background: none;
     color: var(--muted);
-    font-family: 'Inter', sans-serif;
-    font-size: .93rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    padding: 11px;
     cursor: pointer;
-    border-radius: 10px;
-    transition: color .25s;
+    border-radius: 8px;
+    transition: color 0.2s;
     position: relative;
     z-index: 1;
+    font-family: var(--font-body);
 }
 
 .tab-btn.active {
@@ -174,23 +310,17 @@ body {
     bottom: 4px;
     width: calc(50% - 6px);
     left: 4px;
-    background: var(--card2);
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    transition: left .28s cubic-bezier(.4, 0, .2, 1);
-    z-index: 0;
+    background: var(--card);
+    border-radius: 7px;
+    transition: left 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.tab-indicator.right {
-    left: calc(50% + 2px);
-}
-
-/* ── Forms ── */
+/* ── Auth Forms ── */
 .auth-form {
     display: none;
-    padding: 28px;
     flex-direction: column;
-    gap: 18px;
+    gap: 1rem;
 }
 
 .auth-form.active {
@@ -200,47 +330,55 @@ body {
 .field-group {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 0.4rem;
 }
 
 .field-group label {
-    font-size: .82rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--muted);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    letter-spacing: .05em;
+}
+
+.hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    margin-left: 0.3rem;
 }
 
 .input-wrap {
     display: flex;
     align-items: center;
-    background: var(--input);
-    border: 1.5px solid var(--border);
+    background: var(--card2);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    transition: border-color .2s, box-shadow .2s;
     overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input-wrap:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(79, 156, 249, .15);
+    box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
 }
 
 .input-icon {
-    padding: 0 12px;
+    padding: 0 0.75rem;
     font-size: 1rem;
-    user-select: none;
 }
 
 .input-wrap input {
     flex: 1;
-    background: transparent;
+    background: none;
     border: none;
     outline: none;
     color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: .97rem;
-    padding: 13px 0;
+    font-size: 0.95rem;
+    padding: 0.75rem 0;
+    font-family: var(--font-body);
 }
 
 .input-wrap input::placeholder {
@@ -251,87 +389,94 @@ body {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 12px;
+    padding: 0 0.75rem;
     font-size: 1rem;
     color: var(--muted);
 }
 
 /* ── Alert ── */
 .alert {
-    padding: 10px 14px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
-    font-size: .88rem;
-    font-weight: 500;
-    background: rgba(239, 68, 68, .12);
-    border: 1px solid rgba(239, 68, 68, .3);
-    color: var(--accent-r);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
+    color: #fca5a5;
 }
 
 .alert.success {
-    background: rgba(34, 197, 94, .12);
-    border-color: rgba(34, 197, 94, .3);
-    color: var(--accent2);
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #86efac;
 }
 
-.hidden {
-    display: none !important;
-}
-
-/* ── Lock timer ── */
+/* ── Lock Timer ── */
 .lock-timer {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: rgba(245, 158, 11, .1);
-    border: 1px solid rgba(245, 158, 11, .3);
+    gap: 0.5rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
-    color: var(--accent-y);
-    font-size: .88rem;
-    font-weight: 600;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    color: #fca5a5;
 }
 
-.lock-icon {
-    font-size: 1.1rem;
-}
-
-/* ── Primary Button ── */
+/* ── Primary Buttons ── */
 .btn-primary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
     width: 100%;
-    padding: 13px;
-    background: var(--btn-blue);
-    color: #fff;
+    padding: 0.85rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
     border: none;
     border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
+    color: #fff;
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background .2s, transform .1s, box-shadow .2s;
-    box-shadow: 0 4px 18px rgba(37, 99, 235, .4);
-    margin-top: 4px;
-}
-
-.btn-primary:hover {
-    background: #1d4ed8;
-    box-shadow: 0 6px 24px rgba(37, 99, 235, .55);
-    transform: translateY(-1px);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
+    transition: opacity 0.2s, transform 0.15s;
+    font-family: var(--font-body);
+    letter-spacing: 0.03em;
 }
 
 .btn-primary.green {
-    background: var(--btn-green);
-    box-shadow: 0 4px 18px rgba(22, 163, 74, .4);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
-.btn-primary.green:hover {
-    background: #15803d;
-    box-shadow: 0 6px 24px rgba(22, 163, 74, .55);
+.btn-primary.teal {
+    background: linear-gradient(135deg, #2dd4bf, #0891b2);
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── Customer-specific ── */
+.cust-info-text {
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: rgba(45, 212, 191, 0.07);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.not-registered {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.75rem;
+}
+
+.not-registered strong {
+    color: var(--teal);
 }
