@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Library – Customer Portal</title>
+<link rel="stylesheet" href="/static/css/customer.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- Header -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="logo-icon">📚</span>
+    <span class="logo-text">LibraryMS</span>
+    <span class="page-badge">Customer Portal</span>
+  </div>
+  <div class="topbar-right">
+    <div class="user-chip">👤 {{ user }}</div>
+    <button class="hdr-btn teal" onclick="openBooksModal()">📖 Browse Library</button>
+    <a href="/logout" class="hdr-btn red">🚪 Logout</a>
+  </div>
+</header>
+
+<div class="cust-main">
+
+  <!-- Welcome Banner -->
+  <div class="welcome-banner">
+    <div class="welcome-left">
+      <p class="welcome-label">Welcome back,</p>
+      <h2 class="welcome-name" id="custFullName">{{ user }}</h2>
+      <p class="welcome-sub" id="custMember">Loading your membership info…</p>
+    </div>
+    <div class="welcome-right">
+      <div class="stat-pill">
+        <span class="stat-num" id="borrowedCount">—</span>
+        <span class="stat-label">Books Borrowed</span>
+      </div>
+      <div class="stat-pill warn">
+        <span class="stat-num" id="totalFineAmt">—</span>
+        <span class="stat-label">Total Fine</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar hidden" id="statusBar"></div>
+
+  <!-- Borrowing Records -->
+  <section class="section-card">
+    <div class="section-hdr">
+      <span class="section-title">📋 My Borrowing Records</span>
+      <button class="refresh-btn" onclick="loadMyRecords()">↻ Refresh</button>
+    </div>
+    <div id="recordsContainer">
+      <div class="loading-state">⏳ Loading your records…</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Browse Library Books Modal -->
+<div class="modal-overlay hidden" id="booksModal">
+  <div class="modal-box wide">
+    <div class="modal-stripe teal"></div>
+    <div class="modal-hdr">
+      <h2>📚 Library Books Catalogue</h2>
+      <button class="modal-close-btn" onclick="closeBooksModal()">✕</button>
+    </div>
+    <p class="modal-sub">All books in the library — read-only view. Changes made by the manager appear here automatically.</p>
+    <div class="modal-search-wrap">
+      <input type="text" id="modalBookSearch" placeholder="🔍 Search by title, author or ID…" oninput="filterModalBooks()"/>
+    </div>
+    <div class="modal-table-wrap">
+      <table id="modalBooksTable">
+        <thead>
+          <tr>
+            <th>Book ID</th>
+            <th>Book Name</th>
+            <th>Author</th>
+            <th>Price (Rs.)</th>
+            <th>Availability</th>
+          </tr>
+        </thead>
+        <tbody id="modalBooksTbody">
+          <tr><td colspan="5" class="table-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-btns">
+      <button class="action-btn gray" onclick="closeBooksModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/customer.js"></script>
+</body>
+</html>
