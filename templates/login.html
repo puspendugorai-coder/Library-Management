@@ -6,11 +6,10 @@
 <title>Library Management – Login</title>
 <link rel="stylesheet" href="/static/css/auth.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 </head>
 <body>
 
-<!-- Animated Background -->
 <div class="bg-orbs">
   <div class="orb orb1"></div>
   <div class="orb orb2"></div>
@@ -18,24 +17,43 @@
 </div>
 
 <div class="auth-wrapper">
-  <!-- Brand Header -->
+
+  <!-- Brand -->
   <div class="brand">
     <div class="brand-icon">📚</div>
     <h1 class="brand-title">LibraryMS</h1>
     <p class="brand-sub">Management Portal</p>
   </div>
 
-  <!-- Card -->
-  <div class="auth-card" id="authCard">
+  <!-- STEP 1: Role Selector -->
+  <div class="auth-card" id="roleCard">
+    <p class="role-heading">Who are you signing in as?</p>
+    <div class="role-btns">
+      <button class="role-btn manager" onclick="selectRole('manager')">
+        <span class="role-icon">🏛️</span>
+        <span class="role-label">Manager</span>
+        <span class="role-desc">Full system access</span>
+      </button>
+      <button class="role-btn customer" onclick="selectRole('customer')">
+        <span class="role-icon">👤</span>
+        <span class="role-label">Customer</span>
+        <span class="role-desc">View your borrowings</span>
+      </button>
+    </div>
+  </div>
 
-    <!-- TAB SWITCHER -->
+  <!-- STEP 2a: Manager Auth Card -->
+  <div class="auth-card hidden" id="managerCard">
+    <button class="back-btn" onclick="backToRole()">← Back</button>
+    <div class="card-role-badge manager-badge">🏛️ Manager Login</div>
+
     <div class="tab-switcher">
       <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
       <button class="tab-btn" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
       <div class="tab-indicator" id="tabIndicator"></div>
     </div>
 
-    <!-- LOGIN FORM -->
+    <!-- Manager Sign In -->
     <form id="loginForm" class="auth-form active" onsubmit="doLogin(event)">
       <div class="field-group">
         <label>User ID</label>
@@ -58,12 +76,12 @@
         <span id="lockCount">60</span>s remaining
       </div>
       <button type="submit" class="btn-primary" id="loginBtn">
-        <span class="btn-text">Sign In</span>
+        <span class="btn-text">Sign In as Manager</span>
         <span class="btn-loader hidden">⏳</span>
       </button>
     </form>
 
-    <!-- SIGNUP FORM -->
+    <!-- Manager Sign Up -->
     <form id="signupForm" class="auth-form" onsubmit="doSignup(event)">
       <div class="field-group">
         <label>User ID</label>
@@ -94,8 +112,38 @@
         <span class="btn-loader hidden">⏳</span>
       </button>
     </form>
+  </div>
 
-  </div><!-- /auth-card -->
+  <!-- STEP 2b: Customer Auth Card -->
+  <div class="auth-card hidden" id="customerCard">
+    <button class="back-btn" onclick="backToRole()">← Back</button>
+    <div class="card-role-badge customer-badge">👤 Customer Sign In</div>
+
+    <form id="custLoginForm" class="auth-form active" onsubmit="doCustomerLogin(event)">
+      <p class="cust-info-text">Use your Library <strong>ID No.</strong> and <strong>PRN No.</strong> to sign in.</p>
+      <div class="field-group">
+        <label>ID No. <span class="hint">(your library ID card number)</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🪪</span>
+          <input type="text" id="custIdNo" maxlength="6" placeholder="e.g. ST0012" required/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>PRN No.</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔢</span>
+          <input type="text" id="custPrn" maxlength="6" placeholder="e.g. A12345" required/>
+        </div>
+      </div>
+      <div class="alert hidden" id="custAlert"></div>
+      <button type="submit" class="btn-primary teal" id="custLoginBtn">
+        <span class="btn-text">Access My Portal</span>
+        <span class="btn-loader hidden">⏳</span>
+      </button>
+      <p class="not-registered">Not registered? <strong>Contact your library manager</strong> to get enrolled.</p>
+    </form>
+  </div>
+
 </div>
 
 <script src="/static/js/auth.js"></script>
