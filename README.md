@@ -40,6 +40,10 @@ A full-stack, professional Library Management System built with **Flask** and **
 
 * **📱 Data Validation:** Strict enforcement of PRN, ID, and Mobile number formats.
 
+* **📚 Millions of books are available which can be imported to the library by selecting them.
+
+* **📗📘📙Each book has their own individual Book_Id and also contains the name of authors.
+
 ---
 
 ## 📁 Project Architecture
