@@ -22,7 +22,7 @@ A full-stack, professional Library Management System built with **Flask** and **
 
 ### 🚀 Live Demo
 
-[**Click here to open library app**](https://alphacoder7206-library-management.hf.space)
+## 👉 [Click Here to Open the App](https://alphacoder7206-library-management.hf.space)
 
 ---
 
