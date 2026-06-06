@@ -4,10 +4,10 @@
 let allCustomers = [];
 let allBooks = [];
 let selectedPRN = null;
+let selectedBookID = null;   // ✅ FIX Bug 2: track exact book of selected record
 let returnPRN = null;
 let returnBookID = null;
 let returnQty = 1;
-// Book price of the currently selected book (for Final Price auto-calc)
 let currentBookPrice = 0;
 
 // ══════════════════════════════════════════════════════════════════
@@ -34,8 +34,6 @@ function showStatus(msg, type = 'ok') {
 // ══════════════════════════════════════════════════════════════════
 //  AUTO CALCULATIONS
 // ══════════════════════════════════════════════════════════════════
-
-/** Called whenever Date Borrowed or Return Date changes */
 function calcDays() {
     const d1 = document.getElementById('fDateBorrow').value;
     const d2 = document.getElementById('fReturnDate').value;
@@ -45,22 +43,18 @@ function calcDays() {
         const diff = Math.max(0, Math.round((ret - borrow) / 86400000));
         document.getElementById('fDays').value = diff;
 
-        // Date Overdue = return date + 1 day
         const ov = new Date(d2);
         ov.setDate(ov.getDate() + 1);
         document.getElementById('fDateOverdue').value = ov.toISOString().split('T')[0];
 
-        // Days Left = return date − today
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const daysLeft = Math.round((ret - today) / 86400000);
         const dlEl = document.getElementById('fDaysLeft');
         dlEl.value = daysLeft;
-        // colour-code the field
         dlEl.classList.toggle('overdue', daysLeft < 0);
     }
 }
 
-/** Final Price = Book_Price × Qty  (auto, read-only in customer portal) */
 function calcFinalPrice() {
     const qty = parseFloat(document.getElementById('fQty').value) || 0;
     if (currentBookPrice > 0 && qty > 0) {
@@ -120,13 +114,13 @@ function fillForm(r) {
     document.getElementById('fDateOverdue').value = r.Date_Overdue || '';
     document.getElementById('fTotalFine').value = r.Total_Fine || '';
     document.getElementById('fFinalPrice').value = r.Final_Price || '';
-    selectedPRN = r.PRN_NO || null;
 
-    // Restore currentBookPrice from the books cache so Qty change recalcs correctly
+    selectedPRN = r.PRN_NO || null;
+    selectedBookID = r.Book_ID || null;  // ✅ FIX Bug 2
+
     const bk = allBooks.find(b => b.Book_ID === r.Book_ID);
     currentBookPrice = bk ? parseFloat(bk.Book_Price || 0) : 0;
 
-    // Colour Days Left
     const dlEl = document.getElementById('fDaysLeft');
     const dlVal = parseInt(r.Days_Left);
     dlEl.classList.toggle('overdue', !isNaN(dlVal) && dlVal < 0);
@@ -143,6 +137,7 @@ function clearAll() {
     document.getElementById('fQty').value = 1;
     document.getElementById('fDaysLeft').classList.remove('overdue');
     selectedPRN = null;
+    selectedBookID = null;   // ✅ FIX Bug 2
     currentBookPrice = 0;
     document.querySelectorAll('.book-item').forEach(i => i.classList.remove('selected'));
     document.querySelectorAll('#custTbody tr').forEach(r => r.classList.remove('row-selected'));
@@ -156,11 +151,22 @@ function clearBookFields() {
     document.getElementById('fQty').value = 1;
     document.getElementById('fDaysLeft').classList.remove('overdue');
     currentBookPrice = 0;
+    selectedBookID = null;   // ✅ FIX Bug 2
     document.querySelectorAll('.book-item').forEach(i => i.classList.remove('selected'));
 }
 
 // ══════════════════════════════════════════════════════════════════
 //  BOOKS SIDEBAR
+//
+//  ✅ FIX Bug 1 — WRONG BOOK SHOWN ON CLICK
+//  Root cause: renderBooks used onclick="selectBook(${i})" where i
+//  was the index inside the filtered array, but selectBook() read
+//  from allBooks[i]. After filtering, allBooks[0] ≠ filteredBooks[0]
+//  so clicking any card showed the wrong book.
+//
+//  Fix: each card stores data-bookid (the unique Book_ID string).
+//  The event listener looks up allBooks.find(b => b.Book_ID === id),
+//  so it always retrieves the correct object regardless of filtering.
 // ══════════════════════════════════════════════════════════════════
 async function loadBooks() {
     try {
@@ -178,19 +184,30 @@ function renderBooks(books) {
     if (!books.length) {
         list.innerHTML = '<div class="list-loading">No books found.</div>'; return;
     }
-    list.innerHTML = books.map((b, i) => {
+
+    // ✅ data-bookid — no index, no inline JSON
+    list.innerHTML = books.map((b) => {
         const avail = parseInt(b.Availability) || 0;
         const cls = avail > 3 ? 'ok' : avail > 0 ? 'low' : 'none';
         const label = avail === 0 ? '✗ Unavailable' : `✓ Available: ${avail}`;
         const price = b.Book_Price !== undefined ? `Rs.${parseFloat(b.Book_Price || 0).toFixed(2)}` : '—';
         return `
-    <div class="book-item" data-idx="${i}" onclick="selectBook(${i})">
+    <div class="book-item" data-bookid="${esc(b.Book_ID)}">
       <div class="book-item-name">${esc(b.Book_Name)}</div>
       <div class="book-item-author">${esc(b.Author)}</div>
       <div class="book-item-price">💰 ${price}</div>
       <div class="book-item-avail ${cls}">${label}</div>
     </div>`;
     }).join('');
+
+    // ✅ Lookup from master allBooks by Book_ID — always correct
+    list.querySelectorAll('.book-item').forEach(card => {
+        card.addEventListener('click', () => {
+            const bookId = card.dataset.bookid;
+            const book = allBooks.find(b => b.Book_ID === bookId);
+            if (book) selectBook(book, card);
+        });
+    });
 }
 
 function filterBooks() {
@@ -203,30 +220,38 @@ function filterBooks() {
     renderBooks(filtered);
 }
 
-/** Click a book in the sidebar → fill Book fields + set Final Price */
-function selectBook(idx) {
-    const b = allBooks[idx];
-    if (!b) return;
+function selectBook(b, cardEl) {
     document.getElementById('fBookID').value = b.Book_ID || '';
     document.getElementById('fBookName').value = b.Book_Name || '';
     document.getElementById('fAuthor').value = b.Author || '';
 
-    // Store book price and recalculate final price
     currentBookPrice = parseFloat(b.Book_Price || 0);
+    selectedBookID = b.Book_ID || null;  // ✅ FIX Bug 2: keep in sync
     calcFinalPrice();
 
-    // Set today as borrow date if empty
     if (!document.getElementById('fDateBorrow').value) {
         document.getElementById('fDateBorrow').value = new Date().toISOString().split('T')[0];
         calcDays();
     }
 
-    document.querySelectorAll('.book-item').forEach((el, i) =>
-        el.classList.toggle('selected', i === idx));
+    document.querySelectorAll('.book-item').forEach(el => el.classList.remove('selected'));
+    if (cardEl) cardEl.classList.add('selected');
 }
 
 // ══════════════════════════════════════════════════════════════════
 //  CUSTOMERS TABLE
+//
+//  ✅ FIX Bug 3 — CLICKING 2ND RECORD SHOWS 1ST RECORD'S DATA
+//  Root cause: onRowClick(tr, prn) called allCustomers.find(c =>
+//  c.PRN_NO === prn). For customers with 2 books, both rows share
+//  the same PRN_NO, so .find() always returned the first match.
+//
+//  Fix: each <tr> now carries data-row-index (its position in the
+//  rendered rows array). The click handler reads rows[i] directly —
+//  always the exact record, never the first duplicate.
+//
+//  ✅ FIX Bug 2 (table side): each row carries data-bookid so
+//  return/delete can target PRN_NO + Book_ID together.
 // ══════════════════════════════════════════════════════════════════
 async function loadCustomers() {
     try {
@@ -245,11 +270,13 @@ function renderCustomers(rows) {
         tbody.innerHTML = '<tr><td colspan="20" class="table-empty">No records found.</td></tr>';
         return;
     }
-    tbody.innerHTML = rows.map(r => {
+
+    tbody.innerHTML = rows.map((r, i) => {
         const dl = parseInt(r.Days_Left);
         const dlCls = (!isNaN(dl) && dl < 0) ? 'style="color:#ef4444;font-weight:700"' : '';
+        // ✅ data-row-index for exact row lookup; no PRN string matching
         return `
-    <tr onclick="onRowClick(this,'${esc(r.PRN_NO)}')" data-prn="${esc(r.PRN_NO)}">
+    <tr class="cust-row" data-row-index="${i}">
       <td>${esc(r.Member_Type)}</td>
       <td>${esc(r.PRN_NO)}</td>
       <td>${esc(r.ID_NO)}</td>
@@ -272,6 +299,17 @@ function renderCustomers(rows) {
       <td>${esc(r.Final_Price)}</td>
     </tr>`;
     }).join('');
+
+    // ✅ rows[i] — always the exact record clicked
+    tbody.querySelectorAll('.cust-row').forEach(row => {
+        row.addEventListener('click', () => {
+            document.querySelectorAll('#custTbody tr').forEach(r => r.classList.remove('row-selected'));
+            row.classList.add('row-selected');
+            const idx = parseInt(row.dataset.rowIndex);
+            const rec = rows[idx];
+            if (rec) fillForm(rec);
+        });
+    });
 }
 
 function filterCustomers() {
@@ -280,13 +318,6 @@ function filterCustomers() {
         Object.values(r).some(v => String(v || '').toLowerCase().includes(q))
     );
     renderCustomers(filtered);
-}
-
-function onRowClick(tr, prn) {
-    document.querySelectorAll('#custTbody tr').forEach(r => r.classList.remove('row-selected'));
-    tr.classList.add('row-selected');
-    const rec = allCustomers.find(c => c.PRN_NO === prn);
-    if (rec) fillForm(rec);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -322,7 +353,10 @@ async function updateCustomer() {
     }
     const data = getFormData();
     try {
-        const res = await fetch(`/api/customers/${encodeURIComponent(selectedPRN)}`, {
+        // ✅ FIX Bug 2: send book_id so server patches only the right row
+        const url = `/api/customers/${encodeURIComponent(selectedPRN)}`
+            + `?book_id=${encodeURIComponent(selectedBookID || '')}`;
+        const res = await fetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -358,6 +392,7 @@ function confirmReturn() {
 async function doReturn() {
     closeModal('returnModal');
     try {
+        // ✅ FIX Bug 2: delete by PRN_NO + Book_ID (server handles the AND filter)
         const url = `/api/customers/${encodeURIComponent(returnPRN)}`
             + `?book_id=${encodeURIComponent(returnBookID)}&qty=${returnQty}`;
         const res = await fetch(url, { method: 'DELETE' });
@@ -393,30 +428,34 @@ function openBookEntryLogin() {
 
 async function doBookLogin() {
     const uid = document.getElementById('beUid').value.trim();
-    const pwd = document.getElementById('bePwd').value;
-    if (!uid || !pwd) { showBookLoginAlert('Both fields are required.'); return; }
+    const pwd = document.getElementById('bePwd').value.trim();
+    const alertEl = document.getElementById('beAlert');
+    alertEl.classList.add('hidden');
+
+    if (!uid || !pwd) {
+        alertEl.textContent = 'Both fields are required.';
+        alertEl.classList.remove('hidden');
+        return;
+    }
+
     try {
         const res = await fetch('/api/book_login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: uid, password: pwd })
         });
-        const json = await res.json();
-        if (json.success) {
+        const data = await res.json();
+        if (data.success) {
             closeModal('bookLoginModal');
-            window.open('/book_entry', '_blank', 'width=960,height=680');
+            window.open('/book_entry', '_blank');
         } else {
-            showBookLoginAlert(json.error || 'Invalid credentials.');
+            alertEl.textContent = data.error || 'Invalid credentials.';
+            alertEl.classList.remove('hidden');
         }
-    } catch {
-        showBookLoginAlert('Network error.');
+    } catch (e) {
+        alertEl.textContent = 'Network error. Please try again.';
+        alertEl.classList.remove('hidden');
     }
-}
-
-function showBookLoginAlert(msg) {
-    const el = document.getElementById('beAlert');
-    el.textContent = msg;
-    el.classList.remove('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -428,9 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════
-//  DAILY AUTO-UPDATE  (Days Left + Total Fine recalculation)
-//  Runs once on page load, then every 24 hours.
-//  The server recalculates for every record and saves to Supabase.
+//  DAILY AUTO-UPDATE
 // ══════════════════════════════════════════════════════════════════
 async function runDailyUpdate() {
     try {
@@ -438,7 +475,7 @@ async function runDailyUpdate() {
         const json = await res.json();
         if (json.success) {
             console.log(`Daily update: ${json.updated} record(s) refreshed.`);
-            await loadCustomers();  // reload table to show updated Days Left & Total Fine
+            await loadCustomers();
         }
     } catch (e) {
         console.warn('Daily update failed:', e);
@@ -458,5 +495,5 @@ function esc(v) {
 // ══════════════════════════════════════════════════════════════════
 loadBooks();
 loadCustomers();
-runDailyUpdate();                           // immediate run on load
-setInterval(runDailyUpdate, 24 * 60 * 60 * 1000); // repeat every 24 hours
+runDailyUpdate();
+setInterval(runDailyUpdate, 24 * 60 * 60 * 1000);
