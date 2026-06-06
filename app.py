@@ -13,16 +13,17 @@ import datetime
 import secrets as _secrets
 from dotenv import load_dotenv
 
+# This looks for the .env file and loads its contents into environment variables
 load_dotenv()
 
 app = Flask(__name__)
+# Fresh random secret key every run → forces re-login on every restart
 app.secret_key = _secrets.token_hex(32)
 app.config["SESSION_PERMANENT"] = False
 
 # ── Supabase Config ──────────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
 # ── Supabase Helpers ─────────────────────────────────────────────
 def sb_headers(prefer=None):
     h = {
@@ -75,6 +76,35 @@ def sb_delete(table, match_col, match_val):
     except urllib.error.HTTPError as e:
         raise RuntimeError(e.read().decode())
 
+def sb_delete2(table, col1, val1, col2, val2):
+    """Delete rows matching TWO conditions (AND). Used so a single
+    customer's second book record is not accidentally deleted."""
+    v1 = urllib.parse.quote(str(val1))
+    v2 = urllib.parse.quote(str(val2))
+    url = f"{SUPABASE_URL}/rest/v1/{table}?{col1}=eq.{v1}&{col2}=eq.{v2}"
+    req = urllib.request.Request(url, headers=sb_headers(), method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=10):
+            return True
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(e.read().decode())
+
+def sb_patch2(table, col1, val1, col2, val2, data):
+    """Patch rows matching TWO conditions (AND). Used so updating one
+    book record for a customer does not overwrite the other."""
+    v1 = urllib.parse.quote(str(val1))
+    v2 = urllib.parse.quote(str(val2))
+    url = f"{SUPABASE_URL}/rest/v1/{table}?{col1}=eq.{v1}&{col2}=eq.{v2}"
+    body = json.dumps(data).encode()
+    req = urllib.request.Request(url, data=body,
+                                  headers=sb_headers("return=representation"),
+                                  method="PATCH")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(e.read().decode())
+
 # ── Page Routes ──────────────────────────────────────────────────
 @app.route("/")
 def index():
@@ -123,7 +153,6 @@ def save_lockouts(data):
     with open(LOCKOUT_FILE, "w") as f:
         json.dump(data, f)
 
-# ── Manager Login ────────────────────────────────────────────────
 @app.route("/api/login", methods=["POST"])
 def api_login():
     data = request.json
@@ -136,6 +165,7 @@ def api_login():
     now = time.time()
     li = lockouts.get(uid, {"attempts": 0, "locked_until": 0})
 
+    # Lockout check – persists because it's read from file every time
     if li.get("locked_until", 0) > now:
         rem = int(li["locked_until"] - now)
         return jsonify({
@@ -154,6 +184,7 @@ def api_login():
     if rows[0]["password"] != pwd:
         li["attempts"] = li.get("attempts", 0) + 1
         if li["attempts"] >= 3:
+            # Lock for 60 seconds – saved to disk so survives program exit
             li["locked_until"] = now + 60
             li["attempts"] = 0
             lockouts[uid] = li
@@ -168,44 +199,12 @@ def api_login():
             "error": f"Wrong password. {3 - li['attempts']} attempt(s) left."
         }), 401
 
+    # Success – reset lockout
     lockouts[uid] = {"attempts": 0, "locked_until": 0}
     save_lockouts(lockouts)
     session["user_id"] = uid
     return jsonify({"success": True, "user_id": uid})
 
-# ── Customer Login ───────────────────────────────────────────────
-@app.route("/api/customer_login", methods=["POST"])
-def api_customer_login():
-    """
-    Validates customer using ID_NO and PRN_NO from librarymanagementsystem table.
-    If found, creates a customer session. If not, returns a friendly error.
-    """
-    data   = request.json
-    id_no  = data.get("id_no", "").strip().upper()
-    prn_no = data.get("prn_no", "").strip().upper()
-
-    if not id_no or not prn_no:
-        return jsonify({"error": "Both ID No. and PRN No. are required."}), 400
-
-    try:
-        rows = sb_get(
-            "librarymanagementsystem",
-            f"ID_NO=eq.{urllib.parse.quote(id_no)}&PRN_NO=eq.{urllib.parse.quote(prn_no)}"
-            f"&select=ID_NO,PRN_NO,First_Name,Last_Name"
-        )
-    except Exception as e:
-        return jsonify({"error": f"Connection error: {e}"}), 500
-
-    if not rows:
-        return jsonify({
-            "error": "❌ Not registered in the library system. Please contact your library manager to get registered first."
-        }), 401
-
-    session["customer_id"]  = id_no
-    session["customer_prn"] = prn_no
-    return jsonify({"success": True, "id_no": id_no})
-
-# ── Manager Signup ───────────────────────────────────────────────
 @app.route("/api/signup", methods=["POST"])
 def api_signup():
     data = request.json
@@ -227,7 +226,6 @@ def api_signup():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── Book Entry Login ─────────────────────────────────────────────
 @app.route("/api/book_login", methods=["POST"])
 def api_book_login():
     data = request.json
@@ -242,10 +240,11 @@ def api_book_login():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── Lockout Status ───────────────────────────────────────────────
+# ── Lockout status (frontend polling) ───────────────────────────
 @app.route("/api/lockout_status", methods=["POST"])
 def api_lockout_status():
-    uid = request.json.get("user_id", "").strip()
+    """Frontend polls this to know remaining lock time on page load."""
+    uid = request.json.get("user_id","").strip()
     if not uid:
         return jsonify({"locked": False, "remaining": 0})
     lockouts = load_lockouts()
@@ -254,10 +253,46 @@ def api_lockout_status():
     rem = max(0, int(li.get("locked_until", 0) - now))
     return jsonify({"locked": rem > 0, "remaining": rem})
 
+# ── Customer Login ───────────────────────────────────────────────
+@app.route("/api/customer_login", methods=["POST"])
+def api_customer_login():
+    """
+    Validates customer using ID_NO and PRN_NO from librarymanagementsystem.
+    If a matching record exists, creates a customer session.
+    If not found, returns a friendly error asking them to contact the manager.
+    """
+    data   = request.json or {}
+    id_no  = data.get("id_no",  "").strip().upper()
+    prn_no = data.get("prn_no", "").strip().upper()
+
+    if not id_no or not prn_no:
+        return jsonify({"error": "Both ID No. and PRN No. are required."}), 400
+
+    try:
+        rows = sb_get(
+            "librarymanagementsystem",
+            f"ID_NO=eq.{urllib.parse.quote(id_no)}"
+            f"&PRN_NO=eq.{urllib.parse.quote(prn_no)}"
+            f"&select=ID_NO,PRN_NO,First_Name,Last_Name&limit=1"
+        )
+    except Exception as e:
+        return jsonify({"error": f"Connection error: {e}"}), 500
+
+    if not rows:
+        return jsonify({
+            "error": "Not registered in the library system. "
+                     "Please contact your library manager to get enrolled first."
+        }), 401
+
+    session["customer_id"]  = id_no
+    session["customer_prn"] = prn_no
+    return jsonify({"success": True, "id_no": id_no})
+
+
 # ── Customer: My Records ─────────────────────────────────────────
 @app.route("/api/my_records", methods=["GET"])
 def api_my_records():
-    """Returns only the records belonging to the logged-in customer."""
+    """Returns all borrowing records for the logged-in customer only."""
     if "customer_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
@@ -281,9 +316,16 @@ def api_my_records():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── Daily Update ─────────────────────────────────────────────────
+
+# ── Daily update endpoint (called by frontend scheduler) ────────
 @app.route("/api/daily_update", methods=["POST"])
 def api_daily_update():
+    """
+    Called once per day (by the frontend timer) to:
+    1. Recalculate Days_Left for every active record
+    2. Add daily fine after overdue date and update Total_Fine
+    3. Save both fields back to Supabase
+    """
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     try:
@@ -291,22 +333,24 @@ def api_daily_update():
         today = datetime.date.today()
         updated = 0
         for r in rows:
-            prn         = r.get("PRN_NO", "")
-            return_date = r.get("Date_Due", "")
-            overdue_str = r.get("Date_Overdue", "")
-            late_fine_s = r.get("LateReturnFine", "0")
+            prn         = r.get("PRN_NO","")
+            return_date = r.get("Date_Due","")
+            overdue_str = r.get("Date_Overdue","")
+            late_fine_s = r.get("LateReturnFine","0")
             if not prn or not return_date:
                 continue
             try:
                 ret_d = datetime.date.fromisoformat(return_date)
                 days_left = (ret_d - today).days
                 patch = {"Days_Left": str(days_left)}
+                # Calculate total fine if past overdue date
                 if overdue_str:
                     try:
                         ov_d = datetime.date.fromisoformat(overdue_str)
                         if today > ov_d:
                             days_overdue = (today - ov_d).days
-                            fine_num = ''.join(c for c in str(late_fine_s) if c.isdigit() or c == '.')
+                            # Parse fine amount (handle "Rs.50" or "50")
+                            fine_num = ''.join(c for c in str(late_fine_s) if c.isdigit() or c=='.')
                             fine_per_day = float(fine_num) if fine_num else 0.0
                             total_fine = round(days_overdue * fine_per_day, 2)
                             patch["Total_Fine"] = str(total_fine)
@@ -320,7 +364,7 @@ def api_daily_update():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── Customers API (Manager only) ─────────────────────────────────
+# ── Customers API ────────────────────────────────────────────────
 @app.route("/api/customers", methods=["GET"])
 def api_customers():
     if "user_id" not in session:
@@ -337,12 +381,12 @@ def api_add_customer():
         return jsonify({"error": "Unauthorized"}), 401
     data = request.json
 
-    required = ["Member_Type", "PRN_NO", "ID_NO", "First_Name", "Last_Name",
-                "Address1", "Mobile", "Book_ID", "Book_Name", "Author",
-                "Date_Borrowed", "Date_Due"]
+    required = ["Member_Type","PRN_NO","ID_NO","First_Name","Last_Name",
+                "Address1","Mobile","Book_ID","Book_Name","Author",
+                "Date_Borrowed","Date_Due"]
     for f in required:
         if not str(data.get(f, "")).strip():
-            return jsonify({"error": f"{f.replace('_', ' ')} is required."}), 400
+            return jsonify({"error": f"{f.replace('_',' ')} is required."}), 400
 
     prn = data["PRN_NO"].strip()
     if not prn.isalnum() or len(prn) > 6:
@@ -354,10 +398,12 @@ def api_add_customer():
     if not mob.isdigit() or len(mob) != 10:
         return jsonify({"error": "Mobile must be exactly 10 digits."}), 400
 
+    # Qty must be >= 1
     qty = int(data.get("Qty", 1) or 1)
     if qty < 1:
         return jsonify({"error": "Qty must be at least 1."}), 400
 
+    # Check book availability
     book_rows = []
     try:
         book_rows = sb_get("Books_table",
@@ -372,8 +418,9 @@ def api_add_customer():
     except Exception as ex:
         return jsonify({"error": f"Availability check failed: {ex}"}), 500
 
+    # Compute auto fields
     today = datetime.date.today()
-    return_date_str = data.get("Date_Due", "")
+    return_date_str = data.get("Date_Due","")
     days_left = ""
     if return_date_str:
         try:
@@ -388,6 +435,7 @@ def api_add_customer():
 
     try:
         sb_post("librarymanagementsystem", data)
+        # Reduce availability by qty
         if book_rows:
             avail = int(book_rows[0].get("Availability", qty) or qty)
             sb_patch("Books_table", "Book_ID", data["Book_ID"], {"Availability": avail - qty})
@@ -401,12 +449,12 @@ def api_update_customer(prn):
         return jsonify({"error": "Unauthorized"}), 401
     data = request.json
 
-    required = ["Member_Type", "ID_NO", "First_Name", "Last_Name",
-                "Address1", "Mobile", "Book_ID", "Book_Name", "Author",
-                "Date_Borrowed", "Date_Due"]
+    required = ["Member_Type","ID_NO","First_Name","Last_Name",
+                "Address1","Mobile","Book_ID","Book_Name","Author",
+                "Date_Borrowed","Date_Due"]
     for f in required:
-        if not str(data.get(f, "")).strip():
-            return jsonify({"error": f"{f.replace('_', ' ')} is required."}), 400
+        if not str(data.get(f,"")).strip():
+            return jsonify({"error": f"{f.replace('_',' ')} is required."}), 400
 
     id_no = data["ID_NO"].strip()
     if not id_no.isalnum() or len(id_no) > 6:
@@ -415,8 +463,9 @@ def api_update_customer(prn):
     if not mob.isdigit() or len(mob) != 10:
         return jsonify({"error": "Mobile must be exactly 10 digits."}), 400
 
+    # Recalculate Days_Left on update
     today = datetime.date.today()
-    return_date_str = data.get("Date_Due", "")
+    return_date_str = data.get("Date_Due","")
     if return_date_str:
         try:
             ret_d = datetime.date.fromisoformat(return_date_str)
@@ -424,9 +473,18 @@ def api_update_customer(prn):
         except Exception:
             pass
 
+    # Also grab the original book_id from query param so we can target exactly
+    # the right row when a customer has multiple books borrowed
+    orig_book_id = request.args.get("book_id", "").strip()
+
     data.pop("PRN_NO", None)
     try:
-        sb_patch("librarymanagementsystem", "PRN_NO", prn, data)
+        # FIX: Update by PRN_NO AND Book_ID so only the matching row is changed.
+        # Old code patched by PRN_NO alone, updating ALL of that customer's records.
+        if orig_book_id:
+            sb_patch2("librarymanagementsystem", "PRN_NO", prn, "Book_ID", orig_book_id, data)
+        else:
+            sb_patch("librarymanagementsystem", "PRN_NO", prn, data)
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -438,7 +496,13 @@ def api_delete_customer(prn):
     book_id = request.args.get("book_id", "")
     qty     = int(request.args.get("qty", 1) or 1)
     try:
-        sb_delete("librarymanagementsystem", "PRN_NO", prn)
+        # FIX: Delete by PRN_NO AND Book_ID together so only the specific record
+        # is removed. Old code deleted ALL records for that PRN (all books).
+        if book_id:
+            sb_delete2("librarymanagementsystem", "PRN_NO", prn, "Book_ID", book_id)
+        else:
+            sb_delete("librarymanagementsystem", "PRN_NO", prn)
+        # Restore book availability
         if book_id:
             try:
                 book_rows = sb_get("Books_table",
@@ -452,10 +516,9 @@ def api_delete_customer(prn):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ── Books API ─────────────────────────────────────────────────────
+# ── Books API ────────────────────────────────────────────────────
 @app.route("/api/books", methods=["GET"])
 def api_books():
-    # Public endpoint — both manager dashboard and customer portal read from here
     try:
         rows = sb_get("Books_table", "select=*&order=Book_Name.asc")
         return jsonify(rows)
@@ -467,12 +530,12 @@ def api_add_book():
     if "book_user" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     data  = request.json
-    bid   = data.get("Book_ID", "").strip()
-    bname = data.get("Book_Name", "").strip()
-    bauth = data.get("Author", "").strip()
-    avail = str(data.get("Availability", "")).strip()
-    price = str(data.get("Book_Price", "")).strip()
-    if not bid or not bname or not bauth or avail == "" or price == "":
+    bid   = data.get("Book_ID","").strip()
+    bname = data.get("Book_Name","").strip()
+    bauth = data.get("Author","").strip()
+    avail = str(data.get("Availability","")).strip()
+    price = str(data.get("Book_Price","")).strip()
+    if not bid or not bname or not bauth or avail=="" or price=="":
         return jsonify({"error": "All fields are required."}), 400
     if not bid.isalnum() or len(bid) > 6:
         return jsonify({"error": "Book ID must be ≤6 alphanumeric characters."}), 400
@@ -496,11 +559,11 @@ def api_update_book(bid):
     if "book_user" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     data  = request.json
-    bname = data.get("Book_Name", "").strip()
-    bauth = data.get("Author", "").strip()
-    avail = str(data.get("Availability", "")).strip()
-    price = str(data.get("Book_Price", "")).strip()
-    if not bname or not bauth or avail == "" or price == "":
+    bname = data.get("Book_Name","").strip()
+    bauth = data.get("Author","").strip()
+    avail = str(data.get("Availability","")).strip()
+    price = str(data.get("Book_Price","")).strip()
+    if not bname or not bauth or avail=="" or price=="":
         return jsonify({"error": "All fields are required."}), 400
     try:
         sb_patch("Books_table", "Book_ID", bid, {
@@ -522,5 +585,5 @@ def api_delete_book(bid):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
+    port = int(os.environ.get("PORT", 7860)) 
     app.run(host="0.0.0.0", port=port, debug=False)
